@@ -52,6 +52,21 @@ Sensor* SensorDevices::factory(uint8_t iSensorClass, MeasureType iMeasureType)
     }
     if (lSensor == nullptr)
     {
+        // SHT3x and SHT4x share I2C address 0x44.
+        // An SHT3x measure command (0x24xx) is interpreted by an SHT4x as "heater 110 mW for 0.1 s", so never allow both to be selected.
+        if (iSensorClass == SENS_SHT3X || iSensorClass == SENS_SHT4X)
+        {
+            uint8_t lOtherClass = (iSensorClass == SENS_SHT3X) ? SENS_SHT4X : SENS_SHT3X;
+            for (size_t lCount = 0; lCount < mNumSensors; lCount++)
+            {
+                if (mSensors[lCount]->getSensorClass() == lOtherClass)
+                {
+                    logErrorP("SHT3x and SHT4x use the same I2C address 0x44 and cannot be combined! Sensor is ignored.");
+                    iSensorClass = SENS_NO;
+                    break;
+                }
+            }
+        }
         if (mNumSensors >= MAX_SUPPORTED_SENSORS)
         {
             logErrorP("Too many Sensor instances in SensorDevices");
@@ -217,6 +232,8 @@ void SensorDevices::testSensors()
     // this method tests all sensors 
     // each sensor is initialized and should provide at least one measure value
     factory(SENS_SHT3X, Temperature);
+    // TODO: what is necessary to make it safe to enable this test?
+    //factory(SENS_SHT3X, Temperature);
     factory(SENS_BME280, Temperature); // tests also BMP280 and BME680
     SensorSCD41 *lSensor = (SensorSCD41 *)factory(SENS_SCD41, Temperature);
     lSensor->setMeasureInterval(5); // 5 seconds interval for test
