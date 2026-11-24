@@ -83,8 +83,48 @@ bool SensorSHT3x::begin()
     bool lResult = false;
     logInfoP("Starting sensor SHT3x... ");
     lResult = Sensor::begin();
+
+    if (lResult)
+    {
+        // An SHT4x at the same address would interpret our measure command 0x24xx
+        // as "heater 110 mW", so make sure a real SHT3x answers before sending anything else.
+        lResult = verifyIdentity();
+        if (!lResult)
+            logErrorP("No SHT3x found at address 0x%02X (SHT4x connected?). Sensor is disabled!", pI2CAddress);
+    }
+
     logResult(lResult);
     return lResult;
+}
+
+// Positive identification of an SHT3x: only an SHT3x answers the status register read
+// (0xF32D) with 2 data bytes + valid CRC. Neither 0xF3 nor 0x2D is an SHT4x command.
+bool SensorSHT3x::verifyIdentity()
+{
+    uint8_t lBuffer[3];
+
+    // drain pending measurement data, otherwise it could be mistaken for the status word
+    pWire->requestFrom(pI2CAddress, 6);
+    while (pWire->available())
+        pWire->read();
+
+    pWire->beginTransmission(pI2CAddress);
+    pWire->write(SHT3X_READSTATUS >> 8);
+    pWire->write(SHT3X_READSTATUS & 0xFF);
+    if (pWire->endTransmission() != 0)
+        return false;
+    delay(1);
+
+    pWire->requestFrom(pI2CAddress, 3);
+    if (pWire->available() != 3)
+    {
+        while (pWire->available())
+            pWire->read();
+        return false;
+    }
+    for (uint8_t i = 0; i < 3; i++)
+        lBuffer[i] = pWire->read();
+    return lBuffer[2] == crc8(lBuffer, 2);
 }
 
 uint8_t SensorSHT3x::getI2cSpeed()

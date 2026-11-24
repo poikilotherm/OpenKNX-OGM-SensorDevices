@@ -25,6 +25,7 @@ class SensorSHT3x : public Sensor
     uint8_t crc8(const uint8_t* iData, uint8_t iLen);
     bool getTempHum();
     void writeCommand(uint16_t iCmd);
+    bool verifyIdentity();
 
     float mTemp = NO_NUM;
     float mHumidity = NO_NUM;
