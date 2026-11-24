@@ -32,6 +32,7 @@
 #define SENS_VEML7700 11  // Lux
 #define SENS_HLKLD2420 12 // HF-Presence
 #define SENS_MAX31865 14  // PT100/PT1000
+#define SENS_SHT4X 15     // Temp/Hum
 
 enum SensorState
 {
